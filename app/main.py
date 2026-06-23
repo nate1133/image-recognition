@@ -134,12 +134,13 @@ st.write(
     "and test predictions."
 )
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "Upload Images",
     "Dataset Manager",
     "Raw Dataset Scanner",
     "Train Model",
     "Predict"
+    "Evaluate Model"
 ])
 
 
@@ -834,3 +835,150 @@ with tab5:
                     except Exception as e:
                         st.error("Prediction failed.")
                         st.exception(e)
+
+# -----------------------------
+# Tab 6: Evaluate Model
+# -----------------------------
+
+with tab6:
+    st.header("Evaluate Model")
+
+    MODEL_DIR = BASE_DIR / "models"
+    model_path = MODEL_DIR / "logo_classifier.keras"
+    classes_path = MODEL_DIR / "classes.json"
+    info_path = MODEL_DIR / "model_info.json"
+
+    if not model_path.exists():
+        st.warning("No trained model found. Train a model first.")
+
+    elif not classes_path.exists():
+        st.warning("classes.json is missing. Train the model again.")
+
+    elif count_images(TESTING_DIR) == 0:
+        st.warning("No testing images found. Add images to the testing folders first.")
+
+    else:
+        import json
+        import numpy as np
+        import tensorflow as tf
+        from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+        from sklearn.metrics import confusion_matrix, classification_report, accuracy_score
+
+        with open(classes_path, "r") as f:
+            class_names = json.load(f)
+
+        image_size = 160
+
+        if info_path.exists():
+            with open(info_path, "r") as f:
+                model_info = json.load(f)
+                image_size = model_info.get("image_size", 160)
+
+        st.subheader("Evaluation Settings")
+
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            st.metric("Testing Images", count_images(TESTING_DIR))
+
+        with col2:
+            st.metric("Classes", len(class_names))
+
+        with col3:
+            st.metric("Image Size", image_size)
+
+        if st.button("Run Evaluation", key="run_evaluation_button"):
+            with st.spinner("Evaluating model on testing images..."):
+                try:
+                    model = tf.keras.models.load_model(model_path)
+
+                    test_ds = tf.keras.utils.image_dataset_from_directory(
+                        TESTING_DIR,
+                        image_size=(image_size, image_size),
+                        batch_size=32,
+                        shuffle=False,
+                        label_mode="int"
+                    )
+
+                    test_class_names = test_ds.class_names
+
+                    if test_class_names != class_names:
+                        st.warning("Testing folder classes do not perfectly match model classes.")
+                        st.write("Model classes:", class_names)
+                        st.write("Testing folder classes:", test_class_names)
+
+                    y_true = []
+                    y_pred = []
+
+                    for images, labels in test_ds:
+                        processed_images = preprocess_input(images)
+                        predictions = model.predict(processed_images, verbose=0)
+
+                        predicted_labels = np.argmax(predictions, axis=1)
+
+                        y_true.extend(labels.numpy())
+                        y_pred.extend(predicted_labels)
+
+                    accuracy = accuracy_score(y_true, y_pred)
+
+                    st.success("Evaluation complete.")
+
+                    st.metric(
+                        "Overall Test Accuracy",
+                        f"{accuracy * 100:.2f}%"
+                    )
+
+                    cm = confusion_matrix(y_true, y_pred)
+
+                    cm_df = pd.DataFrame(
+                        cm,
+                        index=[f"Actual: {name}" for name in test_class_names],
+                        columns=[f"Predicted: {name}" for name in test_class_names]
+                    )
+
+                    st.subheader("Confusion Matrix")
+                    st.dataframe(cm_df, use_container_width=True)
+
+                    report = classification_report(
+                        y_true,
+                        y_pred,
+                        target_names=test_class_names,
+                        output_dict=True,
+                        zero_division=0
+                    )
+
+                    report_df = pd.DataFrame(report).transpose()
+
+                    st.subheader("Per-Class Performance")
+                    st.dataframe(report_df, use_container_width=True)
+
+                    st.subheader("Class Accuracy")
+
+                    class_accuracy_rows = []
+
+                    for i, class_name in enumerate(test_class_names):
+                        correct = cm[i, i]
+                        total = cm[i].sum()
+                        class_accuracy = correct / total if total > 0 else 0
+
+                        class_accuracy_rows.append({
+                            "Class": class_name,
+                            "Correct": int(correct),
+                            "Total": int(total),
+                            "Accuracy %": class_accuracy * 100
+                        })
+
+                    class_accuracy_df = pd.DataFrame(class_accuracy_rows)
+
+                    st.dataframe(
+                        class_accuracy_df,
+                        use_container_width=True
+                    )
+
+                    st.bar_chart(
+                        class_accuracy_df.set_index("Class")[["Accuracy %"]]
+                    )
+
+                except Exception as e:
+                    st.error("Evaluation failed.")
+                    st.exception(e)
