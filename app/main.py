@@ -596,7 +596,7 @@ with tab4:
                             "model_file": model_filename,
                             "architecture": "MobileNetV2",
                             "image_size": image_size,
-                            "batch_size": batch_size,4
+                            "batch_size": batch_size,
                             "epochs": epochs,
                             "num_classes": len(class_names),
                             "training_images": int(total_training),
