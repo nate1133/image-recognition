@@ -4,6 +4,8 @@ from PIL import Image
 import pandas as pd
 import sys
 from datetime import datetime
+import shutil
+import random
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.append(str(PROJECT_ROOT))
@@ -301,6 +303,159 @@ with tab2:
                 )
                 st.rerun()
 
+st.divider()
+st.subheader("Bulk Dataset Splitter")
+
+st.write(
+    "Move images from one raw class folder into training, validation, and testing folders."
+)
+
+raw_source_dir = st.text_input(
+    "Raw source folder path",
+    value=str(DATA_DIR / "raw_images"),
+    help="Example: /home/homeserver/projects/image-recognition-lab/data/raw_images/raw_data1/Logos"
+)
+
+split_class_name = st.text_input(
+    "Class name for split",
+    placeholder="Example: toyota"
+)
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    train_pct = st.number_input(
+        "Training %",
+        min_value=0,
+        max_value=100,
+        value=70
+    )
+
+with col2:
+    val_pct = st.number_input(
+        "Validation %",
+        min_value=0,
+        max_value=100,
+        value=15
+    )
+
+with col3:
+    test_pct = st.number_input(
+        "Testing %",
+        min_value=0,
+        max_value=100,
+        value=15
+    )
+
+copy_files = st.checkbox(
+    "Copy files instead of move",
+    value=True,
+    help="Recommended. Keeps your raw dataset untouched."
+)
+
+if st.button("Preview Split"):
+    source_path = Path(raw_source_dir)
+
+    if not source_path.exists():
+        st.error("Source folder does not exist.")
+    elif not split_class_name.strip():
+        st.error("Enter a class name.")
+    elif train_pct + val_pct + test_pct != 100:
+        st.error("Training + Validation + Testing must equal 100.")
+    else:
+        files = [
+            p for p in source_path.rglob("*")
+            if p.is_file() and p.suffix.lower() in IMAGE_EXTS
+        ]
+
+        random.shuffle(files)
+
+        total = len(files)
+        train_count = int(total * train_pct / 100)
+        val_count = int(total * val_pct / 100)
+        test_count = total - train_count - val_count
+
+        st.success("Preview ready.")
+
+        st.write({
+            "Total Images": total,
+            "Training": train_count,
+            "Validation": val_count,
+            "Testing": test_count,
+        })
+
+if st.button("Run Split"):
+    source_path = Path(raw_source_dir)
+
+    if not source_path.exists():
+        st.error("Source folder does not exist.")
+    elif not split_class_name.strip():
+        st.error("Enter a class name.")
+    elif train_pct + val_pct + test_pct != 100:
+        st.error("Training + Validation + Testing must equal 100.")
+    else:
+        clean_name = clean_class_name(split_class_name)
+
+        train_dest = TRAINING_DIR / clean_name
+        val_dest = VALIDATION_DIR / clean_name
+        test_dest = TESTING_DIR / clean_name
+
+        train_dest.mkdir(parents=True, exist_ok=True)
+        val_dest.mkdir(parents=True, exist_ok=True)
+        test_dest.mkdir(parents=True, exist_ok=True)
+
+        files = [
+            p for p in source_path.rglob("*")
+            if p.is_file() and p.suffix.lower() in IMAGE_EXTS
+        ]
+
+        random.shuffle(files)
+
+        total = len(files)
+        train_count = int(total * train_pct / 100)
+        val_count = int(total * val_pct / 100)
+
+        train_files = files[:train_count]
+        val_files = files[train_count:train_count + val_count]
+        test_files = files[train_count + val_count:]
+
+        def transfer_files(file_list, destination_dir):
+            moved = 0
+            skipped = 0
+
+            for file_path in file_list:
+                destination = destination_dir / file_path.name
+
+                if destination.exists():
+                    skipped += 1
+                    continue
+
+                if copy_files:
+                    shutil.copy2(file_path, destination)
+                else:
+                    shutil.move(str(file_path), str(destination))
+
+                moved += 1
+
+            return moved, skipped
+
+        train_moved, train_skipped = transfer_files(train_files, train_dest)
+        val_moved, val_skipped = transfer_files(val_files, val_dest)
+        test_moved, test_skipped = transfer_files(test_files, test_dest)
+
+        st.success("Dataset split complete.")
+
+        st.write({
+            "Class": clean_name,
+            "Training Added": train_moved,
+            "Training Skipped": train_skipped,
+            "Validation Added": val_moved,
+            "Validation Skipped": val_skipped,
+            "Testing Added": test_moved,
+            "Testing Skipped": test_skipped,
+        })
+
+        st.rerun()
 
 # -----------------------------
 # Tab 3: Raw Dataset Scanner / Import Wizard
