@@ -218,7 +218,20 @@ with tab1:
 
         with col1:
             if st.button("Delete Selected Uploads", key="delete_selected_uploads"):
-                deleted = 0
+                if not selected_to_delete:
+                    st.warning("Select at least one uploaded image first.")
+                else:
+                    deleted = 0
+
+                    for image_name in selected_to_delete:
+                        image_path = UPLOAD_DIR / image_name
+
+                        if image_path.exists():
+                            image_path.unlink()
+                            deleted += 1
+
+                    st.success(f"Deleted {deleted} uploaded image(s).")
+                    st.rerun()
 
                 for image_name in selected_to_delete:
                     image_path = UPLOAD_DIR / image_name
