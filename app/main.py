@@ -136,13 +136,15 @@ st.write(
     "and test predictions."
 )
 
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     "Upload Images",
     "Dataset Manager",
     "Raw Dataset Scanner",
     "Train Model",
     "Predict",
-    "Evaluate Model"
+    "Evaluate Model",
+    "Model Manager",
+    "Dataset Health"
 ])
 
 
@@ -371,159 +373,159 @@ with tab2:
                 )
                 st.rerun()
 
-st.divider()
-st.subheader("Bulk Dataset Splitter")
+    st.divider()
+    st.subheader("Bulk Dataset Splitter")
 
-st.write(
-    "Move images from one raw class folder into training, validation, and testing folders."
-)
-
-raw_source_dir = st.text_input(
-    "Raw source folder path",
-    value=str(DATA_DIR / "raw_images"),
-    help="Example: /home/homeserver/projects/image-recognition-lab/data/raw_images/raw_data1/Logos"
-)
-
-split_class_name = st.text_input(
-    "Class name for split",
-    placeholder="Example: toyota"
-)
-
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    train_pct = st.number_input(
-        "Training %",
-        min_value=0,
-        max_value=100,
-        value=70
+    st.write(
+        "Move images from one raw class folder into training, validation, and testing folders."
     )
 
-with col2:
-    val_pct = st.number_input(
-        "Validation %",
-        min_value=0,
-        max_value=100,
-        value=15
+    raw_source_dir = st.text_input(
+        "Raw source folder path",
+        value=str(DATA_DIR / "raw_images"),
+        help="Example: /home/homeserver/projects/image-recognition-lab/data/raw_images/raw_data1/Logos"
     )
 
-with col3:
-    test_pct = st.number_input(
-        "Testing %",
-        min_value=0,
-        max_value=100,
-        value=15
+    split_class_name = st.text_input(
+        "Class name for split",
+        placeholder="Example: toyota"
     )
 
-copy_files = st.checkbox(
-    "Copy files instead of move",
-    value=True,
-    help="Recommended. Keeps your raw dataset untouched."
-)
+    col1, col2, col3 = st.columns(3)
 
-if st.button("Preview Split"):
-    source_path = Path(raw_source_dir)
+    with col1:
+        train_pct = st.number_input(
+            "Training %",
+            min_value=0,
+            max_value=100,
+            value=70
+        )
 
-    if not source_path.exists():
-        st.error("Source folder does not exist.")
-    elif not split_class_name.strip():
-        st.error("Enter a class name.")
-    elif train_pct + val_pct + test_pct != 100:
-        st.error("Training + Validation + Testing must equal 100.")
-    else:
-        files = [
-            p for p in source_path.rglob("*")
-            if p.is_file() and p.suffix.lower() in IMAGE_EXTS
-        ]
+    with col2:
+        val_pct = st.number_input(
+            "Validation %",
+            min_value=0,
+            max_value=100,
+            value=15
+        )
 
-        random.shuffle(files)
+    with col3:
+        test_pct = st.number_input(
+            "Testing %",
+            min_value=0,
+            max_value=100,
+            value=15
+        )
 
-        total = len(files)
-        train_count = int(total * train_pct / 100)
-        val_count = int(total * val_pct / 100)
-        test_count = total - train_count - val_count
+    copy_files = st.checkbox(
+        "Copy files instead of move",
+        value=True,
+        help="Recommended. Keeps your raw dataset untouched."
+    )
 
-        st.success("Preview ready.")
+    if st.button("Preview Split"):
+        source_path = Path(raw_source_dir)
 
-        st.write({
-            "Total Images": total,
-            "Training": train_count,
-            "Validation": val_count,
-            "Testing": test_count,
-        })
+        if not source_path.exists():
+            st.error("Source folder does not exist.")
+        elif not split_class_name.strip():
+            st.error("Enter a class name.")
+        elif train_pct + val_pct + test_pct != 100:
+            st.error("Training + Validation + Testing must equal 100.")
+        else:
+            files = [
+                p for p in source_path.rglob("*")
+                if p.is_file() and p.suffix.lower() in IMAGE_EXTS
+            ]
 
-if st.button("Run Split"):
-    source_path = Path(raw_source_dir)
+            random.shuffle(files)
 
-    if not source_path.exists():
-        st.error("Source folder does not exist.")
-    elif not split_class_name.strip():
-        st.error("Enter a class name.")
-    elif train_pct + val_pct + test_pct != 100:
-        st.error("Training + Validation + Testing must equal 100.")
-    else:
-        clean_name = clean_class_name(split_class_name)
+            total = len(files)
+            train_count = int(total * train_pct / 100)
+            val_count = int(total * val_pct / 100)
+            test_count = total - train_count - val_count
 
-        train_dest = TRAINING_DIR / clean_name
-        val_dest = VALIDATION_DIR / clean_name
-        test_dest = TESTING_DIR / clean_name
+            st.success("Preview ready.")
 
-        train_dest.mkdir(parents=True, exist_ok=True)
-        val_dest.mkdir(parents=True, exist_ok=True)
-        test_dest.mkdir(parents=True, exist_ok=True)
+            st.write({
+                "Total Images": total,
+                "Training": train_count,
+                "Validation": val_count,
+                "Testing": test_count,
+            })
 
-        files = [
-            p for p in source_path.rglob("*")
-            if p.is_file() and p.suffix.lower() in IMAGE_EXTS
-        ]
+    if st.button("Run Split"):
+        source_path = Path(raw_source_dir)
 
-        random.shuffle(files)
+        if not source_path.exists():
+            st.error("Source folder does not exist.")
+        elif not split_class_name.strip():
+            st.error("Enter a class name.")
+        elif train_pct + val_pct + test_pct != 100:
+            st.error("Training + Validation + Testing must equal 100.")
+        else:
+            clean_name = clean_class_name(split_class_name)
 
-        total = len(files)
-        train_count = int(total * train_pct / 100)
-        val_count = int(total * val_pct / 100)
+            train_dest = TRAINING_DIR / clean_name
+            val_dest = VALIDATION_DIR / clean_name
+            test_dest = TESTING_DIR / clean_name
 
-        train_files = files[:train_count]
-        val_files = files[train_count:train_count + val_count]
-        test_files = files[train_count + val_count:]
+            train_dest.mkdir(parents=True, exist_ok=True)
+            val_dest.mkdir(parents=True, exist_ok=True)
+            test_dest.mkdir(parents=True, exist_ok=True)
 
-        def transfer_files(file_list, destination_dir):
-            moved = 0
-            skipped = 0
+            files = [
+                p for p in source_path.rglob("*")
+                if p.is_file() and p.suffix.lower() in IMAGE_EXTS
+            ]
 
-            for file_path in file_list:
-                destination = destination_dir / file_path.name
+            random.shuffle(files)
 
-                if destination.exists():
-                    skipped += 1
-                    continue
+            total = len(files)
+            train_count = int(total * train_pct / 100)
+            val_count = int(total * val_pct / 100)
 
-                if copy_files:
-                    shutil.copy2(file_path, destination)
-                else:
-                    shutil.move(str(file_path), str(destination))
+            train_files = files[:train_count]
+            val_files = files[train_count:train_count + val_count]
+            test_files = files[train_count + val_count:]
 
-                moved += 1
+            def transfer_files(file_list, destination_dir):
+                moved = 0
+                skipped = 0
 
-            return moved, skipped
+                for file_path in file_list:
+                    destination = destination_dir / file_path.name
 
-        train_moved, train_skipped = transfer_files(train_files, train_dest)
-        val_moved, val_skipped = transfer_files(val_files, val_dest)
-        test_moved, test_skipped = transfer_files(test_files, test_dest)
+                    if destination.exists():
+                        skipped += 1
+                        continue
 
-        st.success("Dataset split complete.")
+                    if copy_files:
+                        shutil.copy2(file_path, destination)
+                    else:
+                        shutil.move(str(file_path), str(destination))
 
-        st.write({
-            "Class": clean_name,
-            "Training Added": train_moved,
-            "Training Skipped": train_skipped,
-            "Validation Added": val_moved,
-            "Validation Skipped": val_skipped,
-            "Testing Added": test_moved,
-            "Testing Skipped": test_skipped,
-        })
+                    moved += 1
 
-        st.rerun()
+                return moved, skipped
+
+            train_moved, train_skipped = transfer_files(train_files, train_dest)
+            val_moved, val_skipped = transfer_files(val_files, val_dest)
+            test_moved, test_skipped = transfer_files(test_files, test_dest)
+
+            st.success("Dataset split complete.")
+
+            st.write({
+                "Class": clean_name,
+                "Training Added": train_moved,
+                "Training Skipped": train_skipped,
+                "Validation Added": val_moved,
+                "Validation Skipped": val_skipped,
+                "Testing Added": test_moved,
+                "Testing Skipped": test_skipped,
+            })
+
+            st.rerun()
 
 # -----------------------------
 # Tab 3: Raw Dataset Scanner / Import Wizard
@@ -1205,3 +1207,228 @@ with tab6:
                 except Exception as e:
                     st.error("Evaluation failed.")
                     st.exception(e)
+
+# -----------------------------
+# Tab 7: Model Manager
+# -----------------------------
+
+with tab7:
+    st.header("Model Manager")
+
+    MODEL_DIR = BASE_DIR / "models"
+    training_log_path = MODEL_DIR / "training_runs.csv"
+
+    if not training_log_path.exists():
+        st.info("No training run log found yet. Train a model first.")
+    else:
+        runs_df = pd.read_csv(training_log_path)
+
+        if runs_df.empty:
+            st.info("Training log is empty.")
+        else:
+            st.subheader("Training Runs")
+
+            display_df = runs_df.copy()
+
+            for col in [
+                "training_accuracy",
+                "validation_accuracy",
+                "training_loss",
+                "validation_loss"
+            ]:
+                if col in display_df.columns:
+                    display_df[col] = display_df[col].round(4)
+
+            st.dataframe(display_df, use_container_width=True)
+
+            st.divider()
+            st.subheader("Current Best Model")
+
+            if "validation_accuracy" in runs_df.columns:
+                best_row = runs_df.loc[runs_df["validation_accuracy"].idxmax()]
+
+                col1, col2, col3 = st.columns(3)
+
+                with col1:
+                    st.metric("Best Model", best_row["model_file"])
+
+                with col2:
+                    st.metric(
+                        "Validation Accuracy",
+                        f"{best_row['validation_accuracy'] * 100:.2f}%"
+                    )
+
+                with col3:
+                    st.metric("Epochs", int(best_row["epochs"]))
+
+            st.divider()
+            st.subheader("Set Model as Current")
+
+            model_files = runs_df["model_file"].dropna().unique().tolist()
+
+            selected_model = st.selectbox(
+                "Choose model version",
+                model_files,
+                key="selected_model_version"
+            )
+
+            if st.button("Set Selected Model as Current"):
+                import shutil
+
+                selected_model_path = MODEL_DIR / selected_model
+
+                if not selected_model_path.exists():
+                    st.error("Selected model file does not exist.")
+                else:
+                    shutil.copy2(
+                        selected_model_path,
+                        MODEL_DIR / "logo_classifier.keras"
+                    )
+
+                    selected_run = runs_df[runs_df["model_file"] == selected_model].iloc[0]
+
+                    run_time = selected_run["run_time"]
+
+                    info_file = MODEL_DIR / f"model_info_{run_time}.json"
+                    classes_file = MODEL_DIR / f"classes_{run_time}.json"
+
+                    if info_file.exists():
+                        shutil.copy2(info_file, MODEL_DIR / "model_info.json")
+
+                    if classes_file.exists():
+                        shutil.copy2(classes_file, MODEL_DIR / "classes.json")
+
+                    st.success(f"Set {selected_model} as the current model.")
+
+                    # -----------------------------
+# Tab 8: Dataset Health
+# -----------------------------
+
+with tab8:
+    st.header("Dataset Health Checker")
+
+    scan_dirs = {
+        "Uploads": UPLOAD_DIR,
+        "Training": TRAINING_DIR,
+        "Validation": VALIDATION_DIR,
+        "Testing": TESTING_DIR,
+    }
+
+    if st.button("Run Dataset Health Scan", key="run_dataset_health_scan"):
+        broken_images = []
+        tiny_images = []
+        wrong_file_types = []
+        empty_class_folders = []
+        duplicate_filenames = {}
+
+        all_seen_names = {}
+
+        for bucket_name, bucket_dir in scan_dirs.items():
+            if not bucket_dir.exists():
+                continue
+
+            for path in bucket_dir.rglob("*"):
+                if path.is_dir():
+                    if path != bucket_dir and not any(path.iterdir()):
+                        empty_class_folders.append({
+                            "Bucket": bucket_name,
+                            "Folder": str(path)
+                        })
+                    continue
+
+                if path.is_file():
+                    if path.suffix.lower() not in IMAGE_EXTS:
+                        wrong_file_types.append({
+                            "Bucket": bucket_name,
+                            "File": str(path),
+                            "Extension": path.suffix
+                        })
+                        continue
+
+                    if path.name not in all_seen_names:
+                        all_seen_names[path.name] = []
+
+                    all_seen_names[path.name].append(str(path))
+
+                    try:
+                        with Image.open(path) as img:
+                            width, height = img.size
+
+                            if width < 100 or height < 100:
+                                tiny_images.append({
+                                    "Bucket": bucket_name,
+                                    "File": str(path),
+                                    "Width": width,
+                                    "Height": height
+                                })
+
+                            img.verify()
+
+                    except Exception:
+                        broken_images.append({
+                            "Bucket": bucket_name,
+                            "File": str(path)
+                        })
+
+        duplicate_filenames = {
+            name: locations
+            for name, locations in all_seen_names.items()
+            if len(locations) > 1
+        }
+
+        st.success("Dataset health scan complete.")
+
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            st.metric("Broken Images", len(broken_images))
+
+        with col2:
+            st.metric("Tiny Images", len(tiny_images))
+
+        with col3:
+            st.metric("Wrong File Types", len(wrong_file_types))
+
+        with col4:
+            st.metric("Duplicate Filenames", len(duplicate_filenames))
+
+        st.divider()
+
+        if broken_images:
+            st.subheader("Broken Images")
+            st.dataframe(pd.DataFrame(broken_images), use_container_width=True)
+
+        if tiny_images:
+            st.subheader("Very Small Images")
+            st.dataframe(pd.DataFrame(tiny_images), use_container_width=True)
+
+        if wrong_file_types:
+            st.subheader("Wrong File Types")
+            st.dataframe(pd.DataFrame(wrong_file_types), use_container_width=True)
+
+        if empty_class_folders:
+            st.subheader("Empty Class Folders")
+            st.dataframe(pd.DataFrame(empty_class_folders), use_container_width=True)
+
+        if duplicate_filenames:
+            st.subheader("Duplicate Filenames")
+
+            duplicate_rows = []
+
+            for name, locations in duplicate_filenames.items():
+                duplicate_rows.append({
+                    "Filename": name,
+                    "Count": len(locations),
+                    "Locations": " | ".join(locations)
+                })
+
+            st.dataframe(pd.DataFrame(duplicate_rows), use_container_width=True)
+
+        if not any([
+            broken_images,
+            tiny_images,
+            wrong_file_types,
+            empty_class_folders,
+            duplicate_filenames
+        ]):
+            st.success("No obvious dataset problems found.")
