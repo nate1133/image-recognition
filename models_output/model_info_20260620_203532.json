@@ -1,0 +1,27 @@
+{
+    "run_time": "20260620_203532",
+    "model_name": "logo_classifier_20260620_203532.keras",
+    "architecture": "MobileNetV2",
+    "image_size": 224,
+    "batch_size": 64,
+    "epochs": 10,
+    "classes": [
+        "Armani",
+        "Audi",
+        "Chevrolet",
+        "Nike",
+        "Tesla",
+        "TheBatman",
+        "Toyota",
+        "Vans",
+        "chanel",
+        "prada"
+    ],
+    "num_classes": 10,
+    "training_images": 802,
+    "validation_images": 95,
+    "final_training_accuracy": 0.942643404006958,
+    "final_validation_accuracy": 0.9157894849777222,
+    "final_training_loss": 0.27894341945648193,
+    "final_validation_loss": 0.373642235994339
+}
