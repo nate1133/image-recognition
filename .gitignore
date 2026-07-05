@@ -2,9 +2,9 @@ venv/
 __pycache__/
 *.pyc
 
-data/
-models/
-logs/
+/data/
+/models/
+/logs/
 
 .env
 .DS_Store

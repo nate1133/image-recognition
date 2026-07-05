@@ -1,8 +1,9 @@
 from pathlib import Path
 
-BASE_DIR = Path("/home/homeserver/projects/image-recognition-lab")
+BASE_DIR = Path(__file__).resolve().parents[2]
 DATA_DIR = BASE_DIR / "data"
 
+RAW_DIR = DATA_DIR / "raw"
 UPLOAD_DIR = DATA_DIR / "uploads"
 TRAINING_DIR = DATA_DIR / "training"
 TESTING_DIR = DATA_DIR / "testing"
@@ -12,6 +13,7 @@ MODEL_DIR = BASE_DIR / "models"
 IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".webp"]
 
 for folder in [
+    RAW_DIR,
     UPLOAD_DIR,
     TRAINING_DIR,
     TESTING_DIR,

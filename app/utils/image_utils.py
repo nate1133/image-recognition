@@ -1,5 +1,7 @@
-import streamlit as st
+import re
 from pathlib import Path
+
+import streamlit as st
 from PIL import Image
 
 from app.utils.paths import (
@@ -15,11 +17,11 @@ def count_images(folder: Path) -> int:
     if not folder.exists():
         return 0
 
-    total = 0
-    for ext in IMAGE_EXTS:
-        total += len(list(folder.rglob(f"*{ext}")))
-
-    return total
+    return sum(
+        1
+        for path in folder.rglob("*")
+        if path.is_file() and path.suffix.lower() in IMAGE_EXTS
+    )
 
 
 def get_uploaded_images():
@@ -30,7 +32,30 @@ def get_uploaded_images():
 
 
 def clean_class_name(name: str) -> str:
-    return name.strip().lower().replace(" ", "_")
+    cleaned = re.sub(r"[^A-Za-z0-9_.-]+", "_", name.strip())
+    cleaned = cleaned.strip("._-")
+    return cleaned.lower() or "unnamed"
+
+
+def clean_file_name(name: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9_. -]+", "_", Path(name).name.strip())
+    cleaned = cleaned.strip(" ._-")
+    return cleaned or "uploaded_file"
+
+
+def unique_path(path: Path) -> Path:
+    if not path.exists():
+        return path
+
+    counter = 1
+
+    while True:
+        candidate = path.with_name(f"{path.stem}_{counter}{path.suffix}")
+
+        if not candidate.exists():
+            return candidate
+
+        counter += 1
 
 
 def get_all_classes():
