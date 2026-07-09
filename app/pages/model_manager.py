@@ -82,6 +82,30 @@ def render_model_manager_tab():
 
     st.dataframe(display_df, width="stretch")
 
+    note_columns = [
+        col for col in ["dataset_changes", "observations"]
+        if col in runs_df.columns
+    ]
+    if note_columns:
+        noted_runs = runs_df[
+            runs_df[note_columns].fillna("").astype(str).apply(
+                lambda row: any(value.strip() for value in row),
+                axis=1,
+            )
+        ]
+        if not noted_runs.empty:
+            st.subheader("Experiment Notes")
+            for _, run in noted_runs.iloc[::-1].iterrows():
+                with st.expander(str(run.get("model_file", run.get("run_time", "Run")))):
+                    dataset_changes = str(run.get("dataset_changes", "") or "").strip()
+                    observations = str(run.get("observations", "") or "").strip()
+                    if dataset_changes and dataset_changes.lower() != "nan":
+                        st.markdown("**Dataset changes**")
+                        st.write(dataset_changes)
+                    if observations and observations.lower() != "nan":
+                        st.markdown("**Manual observations**")
+                        st.write(observations)
+
     comparison_df = prepare_model_comparison_df(runs_df)
 
     if not comparison_df.empty:

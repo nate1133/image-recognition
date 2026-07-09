@@ -1,6 +1,8 @@
 import json
+import io
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 
 import pandas as pd
@@ -14,6 +16,14 @@ from src.models.predict_model import (
     load_model_metadata,
     save_prediction_correction,
 )
+from src.data.correction_queue import (
+    list_corrections,
+    queue_correction,
+    review_correction,
+)
+from src.data.bundle_transfer import create_portable_bundle, import_portable_bundle
+from src.models.backbones import SUPPORTED_BACKBONES
+from src.models.train_model import normalize_experiment_notes
 
 
 IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".webp"]
@@ -95,6 +105,23 @@ class PredictionCorrectionTests(unittest.TestCase):
             self.assertEqual(first_path.name, "test logo.png")
             self.assertEqual(second_path.name, "test logo_1.png")
 
+    def test_correction_waits_for_approval_before_entering_training(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            queued = queue_correction(
+                root / "review", "Toyota", Image.new("RGB", (20, 20)),
+                "../logo.png", prediction="Honda",
+            )
+            self.assertFalse((root / "training" / "toyota" / "logo.png").exists())
+            self.assertEqual(len(list_corrections(root / "review")), 1)
+
+            destination = review_correction(
+                queued, root / "review", root / "training", approve=True
+            )
+            self.assertTrue(destination.exists())
+            self.assertEqual(destination.parent.name, "toyota")
+            self.assertEqual(list_corrections(root / "review"), [])
+
 
 class ModelMetadataTests(unittest.TestCase):
     def test_load_model_metadata_reads_classes_and_image_size(self):
@@ -113,6 +140,52 @@ class ModelMetadataTests(unittest.TestCase):
             self.assertEqual(class_names, ["Audi", "BMW"])
             self.assertEqual(image_size, 224)
             self.assertEqual(model_info["architecture"], "MobileNetV2")
+
+    def test_supported_backbones_include_requested_options(self):
+        self.assertEqual(
+            SUPPORTED_BACKBONES,
+            ("MobileNetV2", "EfficientNetB0", "ResNet50"),
+        )
+
+
+class BundleTransferTests(unittest.TestCase):
+    def test_bundle_round_trip_preserves_model_and_dataset(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            source_model = root / "source_model"
+            source_model.mkdir()
+            for name in ("logo_classifier.keras", "classes.json", "model_info.json"):
+                (source_model / name).write_text(name)
+            source_splits = {
+                split: root / "source" / split
+                for split in ("training", "validation", "testing")
+            }
+            make_image(source_splits["training"] / "nike" / "one.jpg")
+
+            bundle = create_portable_bundle(source_model, source_splits)
+            target_splits = {
+                split: root / "target" / split
+                for split in ("training", "validation", "testing")
+            }
+            imported = import_portable_bundle(
+                bundle, root / "target_model", target_splits
+            )
+
+            self.assertEqual(len(imported), 4)
+            self.assertTrue((root / "target_model" / "classes.json").exists())
+            self.assertTrue((target_splits["training"] / "nike" / "one.jpg").exists())
+
+    def test_bundle_import_rejects_path_traversal(self):
+        output = io.BytesIO()
+        with zipfile.ZipFile(output, "w") as archive:
+            archive.writestr("manifest.json", json.dumps({
+                "format": "image-recognition-lab-bundle",
+            }))
+            archive.writestr("../escape.txt", "bad")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with self.assertRaises(ValueError):
+                import_portable_bundle(output.getvalue(), Path(tmpdir), {})
 
 
 class DatasetHealthTests(unittest.TestCase):
@@ -171,6 +244,16 @@ class TrainingBalanceTests(unittest.TestCase):
         self.assertIn("empty", warnings[0])
         self.assertIn("small (9)", warnings[1])
         self.assertIn("largest class has 90 images", warnings[2])
+
+    def test_experiment_notes_are_normalized_for_storage(self):
+        notes = normalize_experiment_notes(
+            "  Added new samples  ",
+            None,
+        )
+        self.assertEqual(notes, {
+            "dataset_changes": "Added new samples",
+            "observations": "",
+        })
 
 
 class ModelComparisonTests(unittest.TestCase):

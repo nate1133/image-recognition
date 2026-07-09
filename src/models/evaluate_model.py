@@ -41,15 +41,18 @@ def evaluate_image_classifier(model_dir, testing_dir):
         )
 
     image_size = 160
+    architecture = "MobileNetV2"
 
     if info_path.exists():
         with open(info_path, "r") as f:
             model_info = json.load(f)
             image_size = model_info.get("image_size", 160)
+            architecture = model_info.get("architecture", "MobileNetV2")
 
     import tensorflow as tf
-    from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+    from src.models.backbones import get_preprocess_input
     from sklearn.metrics import confusion_matrix, classification_report, accuracy_score
+    preprocess_input = get_preprocess_input(architecture)
 
     model = tf.keras.models.load_model(model_path)
 

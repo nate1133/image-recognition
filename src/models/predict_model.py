@@ -33,11 +33,14 @@ def load_model_metadata(model_dir):
 
 def predict_image(model_dir, image_file):
     import tensorflow as tf
-    from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+    from src.models.backbones import get_preprocess_input
 
     model_path, class_names, image_size, model_info = load_model_metadata(model_dir)
 
     model = tf.keras.models.load_model(model_path)
+    preprocess_input = get_preprocess_input(
+        model_info.get("architecture", "MobileNetV2")
+    )
 
     img = Image.open(image_file).convert("RGB")
     img_resized = img.resize((image_size, image_size))

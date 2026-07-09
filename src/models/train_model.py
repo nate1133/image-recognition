@@ -3,6 +3,13 @@ from datetime import datetime
 import pandas as pd
 
 
+def normalize_experiment_notes(dataset_changes="", observations=""):
+    return {
+        "dataset_changes": str(dataset_changes or "").strip(),
+        "observations": str(observations or "").strip(),
+    }
+
+
 def train_image_classifier(
     training_dir,
     validation_dir,
@@ -10,11 +17,13 @@ def train_image_classifier(
     image_size=160,
     batch_size=32,
     epochs=5,
+    backbone="MobileNetV2",
+    dataset_changes="",
+    observations="",
 ):
     import tensorflow as tf
     from tensorflow.keras import layers, models
-    from tensorflow.keras.applications import MobileNetV2
-    from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+    from src.models.backbones import get_backbone
 
     model_dir.mkdir(parents=True, exist_ok=True)
     run_time = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -31,6 +40,7 @@ def train_image_classifier(
     latest_info_path = model_dir / "model_info.json"
 
     training_log_path = model_dir / "training_runs.csv"
+    experiment_notes = normalize_experiment_notes(dataset_changes, observations)
 
     train_ds = tf.keras.utils.image_dataset_from_directory(
         training_dir,
@@ -50,14 +60,13 @@ def train_image_classifier(
         class_names=class_names,
     )
 
+    base_model, preprocess_input = get_backbone(
+        backbone,
+        (image_size, image_size, 3),
+    )
+
     train_ds = train_ds.map(lambda x, y: (preprocess_input(x), y))
     val_ds = val_ds.map(lambda x, y: (preprocess_input(x), y))
-
-    base_model = MobileNetV2(
-        input_shape=(image_size, image_size, 3),
-        include_top=False,
-        weights="imagenet",
-    )
 
     base_model.trainable = False
 
@@ -92,7 +101,7 @@ def train_image_classifier(
     model_info = {
         "run_time": run_time,
         "model_name": model_filename,
-        "architecture": "MobileNetV2",
+        "architecture": backbone,
         "image_size": image_size,
         "batch_size": batch_size,
         "epochs": epochs,
@@ -102,6 +111,7 @@ def train_image_classifier(
         "final_validation_accuracy": float(history.history["val_accuracy"][-1]),
         "final_training_loss": float(history.history["loss"][-1]),
         "final_validation_loss": float(history.history["val_loss"][-1]),
+        "experiment_notes": experiment_notes,
     }
 
     with open(info_path, "w") as f:
@@ -113,7 +123,7 @@ def train_image_classifier(
     log_row = pd.DataFrame([{
         "run_time": run_time,
         "model_file": model_filename,
-        "architecture": "MobileNetV2",
+        "architecture": backbone,
         "image_size": image_size,
         "batch_size": batch_size,
         "epochs": epochs,
@@ -122,6 +132,8 @@ def train_image_classifier(
         "validation_accuracy": model_info["final_validation_accuracy"],
         "training_loss": model_info["final_training_loss"],
         "validation_loss": model_info["final_validation_loss"],
+        "dataset_changes": experiment_notes["dataset_changes"],
+        "observations": experiment_notes["observations"],
     }])
 
     if training_log_path.exists():

@@ -15,6 +15,8 @@ from app.pages.train import render_train_tab
 from app.pages.evaluate import render_evaluate_tab
 from app.pages.model_manager import render_model_manager_tab
 from app.pages.dataset_health import render_dataset_health_tab
+from app.pages.correction_review import render_correction_review_tab
+from app.pages.transfer import render_transfer_tab
 
 from app.utils.paths import (
     UPLOAD_DIR,
@@ -70,7 +72,7 @@ st.write(
     "and test predictions."
 )
 
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9, tab10 = st.tabs([
     "Upload Images",
     "Dataset Manager",
     "Raw Dataset Scanner",
@@ -78,7 +80,9 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     "Predict",
     "Evaluate Model",
     "Model Manager",
-    "Dataset Health"
+    "Dataset Health",
+    "Correction Review",
+    "Export / Import",
 ])
 
 
@@ -118,3 +122,9 @@ with tab7:
 
 with tab8:
     render_dataset_health_tab()
+
+with tab9:
+    render_correction_review_tab()
+
+with tab10:
+    render_transfer_tab()

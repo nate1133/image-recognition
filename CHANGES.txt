@@ -4,6 +4,21 @@ Image Recognition Lab Change Log
 Use this file to track code changes made by Codex or by hand. Add new entries
 at the top so the newest work is easiest to find.
 
+2026-07-08
+----------
+- Added experiment note fields for dataset changes and manual observations.
+- Saved notes in timestamped model metadata and the training run history.
+- Added an Experiment Notes section to Model Manager and normalization coverage.
+
+2026-07-08
+----------
+- Added a prediction correction review queue with approve/reject actions.
+- Added safe ZIP export/import for current model artifacts and dataset splits.
+- Added configurable MobileNetV2, EfficientNetB0, and ResNet50 backbones with
+  architecture-specific preprocessing in training, prediction, and evaluation.
+- Added automated coverage for correction review, bundle round trips and unsafe
+  archive paths, and the backbone registry.
+
 2026-07-07
 ----------
 - Added model comparison charts to app/pages/model_manager.py for training and

@@ -15,14 +15,18 @@ accuracy, and inspect model history.
   testing buckets.
 - Scan raw image datasets and import selected classes with a train/validation/test
   split.
-- Train a MobileNetV2 transfer-learning classifier.
+- Train a MobileNetV2, EfficientNetB0, or ResNet50 transfer-learning classifier.
 - Save timestamped model versions plus current-model copies.
 - Predict a class for a single uploaded image.
-- Save corrected prediction images back into the selected training class.
+- Queue corrected predictions for approval or rejection before training use.
+- Export and import portable ZIP bundles containing the current model and/or
+  training, validation, and testing splits.
 - Evaluate the current model against testing images with a confusion matrix,
   classification report, and per-class accuracy table.
 - View training run history and choose a previous model version as current.
 - Compare model accuracy and loss across training runs with charts.
+- Record dataset changes and manual observations with each training run, then
+  review those notes in Model Manager.
 - Review per-class training sample counts and imbalance warnings before
   training.
 - Run dataset health checks for broken images, tiny images, wrong file types,
@@ -93,12 +97,13 @@ Then open the local Streamlit URL shown in the terminal.
 5. Use `Raw Dataset Scanner` when importing a larger folder or ZIP dataset.
 6. Go to `Train Model` and train a new classifier.
 7. Use `Predict` to test individual images.
-8. If a prediction is wrong, choose the correct class and save the image back to
-   training data.
+8. If a prediction is wrong, submit the correction, then approve it in
+   `Correction Review`.
 9. Use `Evaluate Model` to measure test-set performance.
 10. Use `Model Manager` to compare runs and restore a previous model version.
 11. Use `Dataset Health` before serious training to catch broken or suspicious
     files.
+12. Use `Export / Import` to share or restore a model and dataset splits.
 
 ## Model Files
 
@@ -143,15 +148,6 @@ Run a quick metadata load check:
   model classes in `models/classes.json`.
 - TensorFlow says CUDA is missing: the app can still run on CPU; GPU support is
   optional.
-
-## Future Features
-
-- Add a review queue for saved prediction corrections before they enter training
-  data.
-- Add export/import tools for sharing model bundles and dataset splits.
-- Add configurable model backbones such as EfficientNet or ResNet.
-- Add basic experiment notes so each training run can record dataset changes and
-  manual observations.
 
 ## Change Tracking
 

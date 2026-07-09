@@ -1,11 +1,11 @@
 import streamlit as st
 import pandas as pd
 
-from app.utils.paths import TRAINING_DIR, MODEL_DIR
+from app.utils.paths import CORRECTION_REVIEW_DIR, MODEL_DIR
+from src.data.correction_queue import queue_correction
 from src.models.predict_model import (
     load_model_metadata,
     predict_image,
-    save_prediction_correction,
 )
 
 
@@ -103,13 +103,14 @@ def render_predict_tab():
     )
 
     if st.button(
-        "Save Image to Correct Training Class",
+        "Submit Correction for Review",
         key="save_correction_button"
     ):
-        save_prediction_correction(
-            training_dir=TRAINING_DIR,
+        queue_correction(
+            queue_dir=CORRECTION_REVIEW_DIR,
             class_name=correct_class,
             image=img,
             original_filename=prediction_file.name,
+            prediction=prediction["top_class"],
         )
-        st.success(f"Saved image to training/{correct_class}")
+        st.success(f"Queued correction for review as {correct_class}.")

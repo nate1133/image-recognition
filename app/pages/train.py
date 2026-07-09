@@ -4,6 +4,7 @@ import pandas as pd
 from app.utils.paths import TRAINING_DIR, TESTING_DIR, VALIDATION_DIR, MODEL_DIR
 from app.utils.image_utils import count_images, get_all_classes
 from src.models.train_model import train_image_classifier
+from src.models.backbones import SUPPORTED_BACKBONES
 
 
 def get_training_balance_warnings(dataset_df, min_images_per_class=10, max_ratio=3.0):
@@ -107,6 +108,12 @@ def render_train_tab():
 
     st.subheader("Training Settings")
 
+    backbone = st.selectbox(
+        "Model Backbone",
+        SUPPORTED_BACKBONES,
+        help="MobileNetV2 is fastest; EfficientNetB0 and ResNet50 offer alternatives.",
+    )
+
     col1, col2, col3 = st.columns(3)
 
     with col1:
@@ -118,6 +125,18 @@ def render_train_tab():
     with col3:
         epochs = st.number_input("Epochs", 1, 50, 5, 1)
 
+    st.subheader("Experiment Notes")
+    dataset_changes = st.text_area(
+        "Dataset changes",
+        placeholder="Example: Added 40 Toyota images and removed duplicate logos.",
+        help="Record what changed in the dataset since the previous run.",
+    )
+    observations = st.text_area(
+        "Manual observations",
+        placeholder="Example: More varied backgrounds; watch confusion between Audi and VW.",
+        help="Record hypotheses, caveats, or anything worth remembering.",
+    )
+
     if st.button("Train Model"):
         with st.spinner("Training model..."):
             try:
@@ -128,6 +147,9 @@ def render_train_tab():
                     image_size=image_size,
                     batch_size=batch_size,
                     epochs=epochs,
+                    backbone=backbone,
+                    dataset_changes=dataset_changes,
+                    observations=observations,
                 )
 
                 st.success("Model trained and saved successfully.")
