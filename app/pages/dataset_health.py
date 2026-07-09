@@ -1,6 +1,5 @@
 import pandas as pd
 import streamlit as st
-from PIL import Image
 
 from app.utils.paths import (
     IMAGE_EXTS,
@@ -9,6 +8,7 @@ from app.utils.paths import (
     UPLOAD_DIR,
     VALIDATION_DIR,
 )
+from src.data.dataset_health import scan_dataset_health
 
 
 def render_dataset_health_tab():
@@ -24,70 +24,21 @@ def render_dataset_health_tab():
     if not st.button("Run Dataset Health Scan", key="run_dataset_health_scan"):
         return
 
-    broken_images = []
-    tiny_images = []
-    wrong_file_types = []
-    empty_class_folders = []
-    duplicate_filenames = {}
+    results = scan_dataset_health(
+        scan_dirs=scan_dirs,
+        image_exts=IMAGE_EXTS,
+    )
 
-    all_seen_names = {}
-
-    for bucket_name, bucket_dir in scan_dirs.items():
-        if not bucket_dir.exists():
-            continue
-
-        for path in bucket_dir.rglob("*"):
-            if path.is_dir():
-                if path != bucket_dir and not any(path.iterdir()):
-                    empty_class_folders.append({
-                        "Bucket": bucket_name,
-                        "Folder": str(path)
-                    })
-                continue
-
-            if path.is_file():
-                if path.suffix.lower() not in IMAGE_EXTS:
-                    wrong_file_types.append({
-                        "Bucket": bucket_name,
-                        "File": str(path),
-                        "Extension": path.suffix
-                    })
-                    continue
-
-                if path.name not in all_seen_names:
-                    all_seen_names[path.name] = []
-
-                all_seen_names[path.name].append(str(path))
-
-                try:
-                    with Image.open(path) as img:
-                        width, height = img.size
-
-                        if width < 100 or height < 100:
-                            tiny_images.append({
-                                "Bucket": bucket_name,
-                                "File": str(path),
-                                "Width": width,
-                                "Height": height
-                            })
-
-                        img.verify()
-
-                except Exception:
-                    broken_images.append({
-                        "Bucket": bucket_name,
-                        "File": str(path)
-                    })
-
-    duplicate_filenames = {
-        name: locations
-        for name, locations in all_seen_names.items()
-        if len(locations) > 1
-    }
+    broken_images = results["broken_images"]
+    tiny_images = results["tiny_images"]
+    wrong_file_types = results["wrong_file_types"]
+    empty_class_folders = results["empty_class_folders"]
+    duplicate_filenames = results["duplicate_filenames"]
+    duplicate_images = results["duplicate_images"]
 
     st.success("Dataset health scan complete.")
 
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns(5)
 
     with col1:
         st.metric("Broken Images", len(broken_images))
@@ -101,23 +52,26 @@ def render_dataset_health_tab():
     with col4:
         st.metric("Duplicate Filenames", len(duplicate_filenames))
 
+    with col5:
+        st.metric("Duplicate Images", len(duplicate_images))
+
     st.divider()
 
     if broken_images:
         st.subheader("Broken Images")
-        st.dataframe(pd.DataFrame(broken_images), use_container_width=True)
+        st.dataframe(pd.DataFrame(broken_images), width="stretch")
 
     if tiny_images:
         st.subheader("Very Small Images")
-        st.dataframe(pd.DataFrame(tiny_images), use_container_width=True)
+        st.dataframe(pd.DataFrame(tiny_images), width="stretch")
 
     if wrong_file_types:
         st.subheader("Wrong File Types")
-        st.dataframe(pd.DataFrame(wrong_file_types), use_container_width=True)
+        st.dataframe(pd.DataFrame(wrong_file_types), width="stretch")
 
     if empty_class_folders:
         st.subheader("Empty Class Folders")
-        st.dataframe(pd.DataFrame(empty_class_folders), use_container_width=True)
+        st.dataframe(pd.DataFrame(empty_class_folders), width="stretch")
 
     if duplicate_filenames:
         st.subheader("Duplicate Filenames")
@@ -131,13 +85,30 @@ def render_dataset_health_tab():
                 "Locations": " | ".join(locations)
             })
 
-        st.dataframe(pd.DataFrame(duplicate_rows), use_container_width=True)
+        st.dataframe(pd.DataFrame(duplicate_rows), width="stretch")
+
+    if duplicate_images:
+        st.subheader("Duplicate Images")
+
+        duplicate_image_rows = []
+
+        for image_hash, locations in duplicate_images.items():
+            duplicate_image_rows.append({
+                "Image Hash": image_hash,
+                "Count": len(locations),
+                "Locations": " | ".join(
+                    location["File"] for location in locations
+                ),
+            })
+
+        st.dataframe(pd.DataFrame(duplicate_image_rows), width="stretch")
 
     if not any([
         broken_images,
         tiny_images,
         wrong_file_types,
         empty_class_folders,
-        duplicate_filenames
+        duplicate_filenames,
+        duplicate_images,
     ]):
         st.success("No obvious dataset problems found.")

@@ -71,7 +71,7 @@ def render_dataset_manager_tab():
             rows.append(row)
 
         df = pd.DataFrame(rows)
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, width="stretch")
 
     st.divider()
 

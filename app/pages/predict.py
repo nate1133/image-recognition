@@ -2,8 +2,11 @@ import streamlit as st
 import pandas as pd
 
 from app.utils.paths import TRAINING_DIR, MODEL_DIR
-from app.utils.image_utils import clean_file_name, unique_path
-from src.models.predict_model import load_model_metadata, predict_image
+from src.models.predict_model import (
+    load_model_metadata,
+    predict_image,
+    save_prediction_correction,
+)
 
 
 def render_predict_tab():
@@ -42,63 +45,71 @@ def render_predict_tab():
     )
 
     if not prediction_file:
+        st.session_state.pop("last_prediction", None)
+        st.session_state.pop("last_prediction_filename", None)
         return
 
     if st.button("Run Prediction", key="run_prediction_button"):
         with st.spinner("Running prediction..."):
             try:
                 prediction = predict_image(MODEL_DIR, prediction_file)
-
-                img = prediction["image"]
-                class_names = prediction["class_names"]
-
-                st.image(
-                    img,
-                    caption="Image for prediction",
-                    width=400
-                )
-
-                st.success(f"Prediction: {prediction['top_class']}")
-
-                st.metric(
-                    "Confidence",
-                    f"{prediction['top_confidence'] * 100:.2f}%"
-                )
-
-                results_df = pd.DataFrame(prediction["results"])
-
-                st.subheader("Top Predictions")
-
-                st.dataframe(
-                    results_df[["Class", "Confidence %"]],
-                    use_container_width=True
-                )
-
-                chart_df = results_df.set_index("Class")[["Confidence %"]]
-                st.bar_chart(chart_df)
-
-                st.divider()
-                st.subheader("Correct Prediction")
-
-                correct_class = st.selectbox(
-                    "If the prediction is wrong, choose the correct class",
-                    class_names,
-                    key="correct_prediction_class_tab5"
-                )
-
-                if st.button(
-                    "Save Image to Correct Training Class",
-                    key="save_correction_button"
-                ):
-                    correction_dir = TRAINING_DIR / correct_class
-                    correction_dir.mkdir(parents=True, exist_ok=True)
-
-                    save_path = unique_path(
-                        correction_dir / clean_file_name(prediction_file.name)
-                    )
-                    img.convert("RGB").save(save_path)
-                    st.success(f"Saved image to training/{correct_class}")
-
+                st.session_state.last_prediction = prediction
+                st.session_state.last_prediction_filename = prediction_file.name
             except Exception as e:
                 st.error("Prediction failed.")
                 st.exception(e)
+
+    prediction = st.session_state.get("last_prediction")
+    prediction_filename = st.session_state.get("last_prediction_filename")
+
+    if not prediction or prediction_filename != prediction_file.name:
+        return
+
+    img = prediction["image"]
+    class_names = prediction["class_names"]
+
+    st.image(
+        img,
+        caption="Image for prediction",
+        width=400
+    )
+
+    st.success(f"Prediction: {prediction['top_class']}")
+
+    st.metric(
+        "Confidence",
+        f"{prediction['top_confidence'] * 100:.2f}%"
+    )
+
+    results_df = pd.DataFrame(prediction["results"])
+
+    st.subheader("Top Predictions")
+
+    st.dataframe(
+        results_df[["Class", "Confidence %"]],
+        width="stretch"
+    )
+
+    chart_df = results_df.set_index("Class")[["Confidence %"]]
+    st.bar_chart(chart_df)
+
+    st.divider()
+    st.subheader("Correct Prediction")
+
+    correct_class = st.selectbox(
+        "If the prediction is wrong, choose the correct class",
+        class_names,
+        key="correct_prediction_class_tab5"
+    )
+
+    if st.button(
+        "Save Image to Correct Training Class",
+        key="save_correction_button"
+    ):
+        save_prediction_correction(
+            training_dir=TRAINING_DIR,
+            class_name=correct_class,
+            image=img,
+            original_filename=prediction_file.name,
+        )
+        st.success(f"Saved image to training/{correct_class}")

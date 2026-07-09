@@ -6,6 +6,60 @@ from app.utils.image_utils import count_images, get_all_classes
 from src.models.train_model import train_image_classifier
 
 
+def get_training_balance_warnings(dataset_df, min_images_per_class=10, max_ratio=3.0):
+    warnings = []
+
+    if dataset_df.empty or "Training Images" not in dataset_df.columns:
+        return warnings
+
+    training_counts = dataset_df[["Class", "Training Images"]].copy()
+    training_counts["Training Images"] = pd.to_numeric(
+        training_counts["Training Images"],
+        errors="coerce",
+    ).fillna(0)
+
+    empty_classes = training_counts[
+        training_counts["Training Images"] == 0
+    ]["Class"].tolist()
+
+    if empty_classes:
+        warnings.append(
+            "Classes with no training images: "
+            + ", ".join(empty_classes)
+        )
+
+    low_sample_classes = training_counts[
+        (training_counts["Training Images"] > 0)
+        & (training_counts["Training Images"] < min_images_per_class)
+    ]
+
+    if not low_sample_classes.empty:
+        warnings.append(
+            f"Classes with fewer than {min_images_per_class} training images: "
+            + ", ".join(
+                f"{row['Class']} ({int(row['Training Images'])})"
+                for _, row in low_sample_classes.iterrows()
+            )
+        )
+
+    nonzero_counts = training_counts[
+        training_counts["Training Images"] > 0
+    ]["Training Images"]
+
+    if len(nonzero_counts) >= 2:
+        min_count = int(nonzero_counts.min())
+        max_count = int(nonzero_counts.max())
+
+        if min_count and max_count / min_count >= max_ratio:
+            warnings.append(
+                "Training set is imbalanced: largest class has "
+                f"{max_count} images and smallest non-empty class has "
+                f"{min_count} images."
+            )
+
+    return warnings
+
+
 def render_train_tab():
     st.header("Train Model")
 
@@ -26,7 +80,19 @@ def render_train_tab():
         })
 
     dataset_df = pd.DataFrame(rows)
-    st.dataframe(dataset_df, use_container_width=True)
+    st.dataframe(dataset_df, width="stretch")
+
+    training_counts = dataset_df.set_index("Class")[["Training Images"]]
+    st.subheader("Training Class Balance")
+    st.bar_chart(training_counts)
+
+    balance_warnings = get_training_balance_warnings(dataset_df)
+
+    if balance_warnings:
+        for warning in balance_warnings:
+            st.warning(warning)
+    else:
+        st.success("Training classes look reasonably balanced.")
 
     total_training = dataset_df["Training Images"].sum()
     total_validation = dataset_df["Validation Images"].sum()
@@ -77,7 +143,7 @@ def render_train_tab():
                 )
 
                 st.subheader("Training History")
-                st.dataframe(history_df, use_container_width=True)
+                st.dataframe(history_df, width="stretch")
 
                 st.line_chart(
                     history_df.set_index("Epoch")[[

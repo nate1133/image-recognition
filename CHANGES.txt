@@ -1,0 +1,55 @@
+Image Recognition Lab Change Log
+================================
+
+Use this file to track code changes made by Codex or by hand. Add new entries
+at the top so the newest work is easiest to find.
+
+2026-07-07
+----------
+- Added model comparison charts to app/pages/model_manager.py for training and
+  validation accuracy/loss across training runs.
+- Added per-class training sample counts and imbalance warnings to
+  app/pages/train.py before the training settings.
+- Added tests for model comparison chart preparation and training balance
+  warning logic.
+- Updated README.md so model comparison and class-balance checks are listed as
+  current features instead of future features.
+- Verified with:
+  ./venv/bin/python -m unittest discover -v
+
+2026-07-07
+----------
+- Added automated unittest coverage for raw dataset import splitting,
+  prediction correction saving, model metadata loading, and perceptual duplicate
+  image detection.
+- Added src/data/dataset_health.py to make dataset health scanning testable and
+  to detect duplicate image content with perceptual hashes, not just duplicate
+  filenames.
+- Updated app/pages/dataset_health.py to show a Duplicate Images metric and
+  table using perceptual hash matches.
+- Extracted prediction correction saving into
+  src/models/predict_model.py::save_prediction_correction and updated the
+  Predict tab to use it.
+- Updated README.md so the implemented test and duplicate-detection features are
+  listed as current features.
+- Verified with:
+  ./venv/bin/python -m unittest discover -v
+  ./venv/bin/python -m compileall app src tests
+
+2026-07-07
+----------
+- Replaced the stub README with a full project guide covering the app purpose,
+  features, project layout, setup, run command, workflow, model files,
+  development checks, troubleshooting, and future feature ideas.
+
+2026-07-07
+----------
+- Fixed the Predict tab correction workflow in app/pages/predict.py. The last
+  prediction is now stored in Streamlit session state so the "Save Image to
+  Correct Training Class" button works after Streamlit reruns the page.
+- Updated Streamlit table and image sizing calls across the app from the
+  deprecated use_container_width argument to the current width API.
+- Verified the app code with:
+  ./venv/bin/python -m compileall app src
+- Verified the current model metadata loads and ran one real prediction against
+  an existing testing image.

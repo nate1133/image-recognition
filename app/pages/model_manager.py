@@ -6,6 +6,52 @@ import streamlit as st
 from app.utils.paths import MODEL_DIR
 
 
+def prepare_model_comparison_df(runs_df):
+    chart_columns = [
+        "training_accuracy",
+        "validation_accuracy",
+        "training_loss",
+        "validation_loss",
+    ]
+
+    available_columns = [
+        col for col in chart_columns
+        if col in runs_df.columns
+    ]
+
+    if not available_columns:
+        return pd.DataFrame()
+
+    comparison_df = runs_df.copy()
+
+    for col in available_columns:
+        comparison_df[col] = pd.to_numeric(comparison_df[col], errors="coerce")
+
+    comparison_df = comparison_df.dropna(
+        subset=available_columns,
+        how="all",
+    )
+
+    if comparison_df.empty:
+        return comparison_df
+
+    if "run_time" in comparison_df.columns:
+        comparison_df = comparison_df.sort_values("run_time")
+        comparison_df["Run"] = comparison_df["run_time"].astype(str)
+    else:
+        comparison_df["Run"] = [
+            f"Run {index + 1}" for index in range(len(comparison_df))
+        ]
+
+    if "model_file" in comparison_df.columns:
+        comparison_df["Run"] = comparison_df.apply(
+            lambda row: f"{row['Run']} - {row['model_file']}",
+            axis=1,
+        )
+
+    return comparison_df.set_index("Run")
+
+
 def render_model_manager_tab():
     st.header("Model Manager")
 
@@ -34,7 +80,41 @@ def render_model_manager_tab():
         if col in display_df.columns:
             display_df[col] = display_df[col].round(4)
 
-    st.dataframe(display_df, use_container_width=True)
+    st.dataframe(display_df, width="stretch")
+
+    comparison_df = prepare_model_comparison_df(runs_df)
+
+    if not comparison_df.empty:
+        st.divider()
+        st.subheader("Model Comparison")
+
+        accuracy_cols = [
+            col for col in ["training_accuracy", "validation_accuracy"]
+            if col in comparison_df.columns
+        ]
+        loss_cols = [
+            col for col in ["training_loss", "validation_loss"]
+            if col in comparison_df.columns
+        ]
+
+        if accuracy_cols:
+            accuracy_chart_df = comparison_df[accuracy_cols] * 100
+            accuracy_chart_df = accuracy_chart_df.rename(columns={
+                "training_accuracy": "Training Accuracy %",
+                "validation_accuracy": "Validation Accuracy %",
+            })
+
+            st.caption("Accuracy across training runs")
+            st.line_chart(accuracy_chart_df)
+
+        if loss_cols:
+            loss_chart_df = comparison_df[loss_cols].rename(columns={
+                "training_loss": "Training Loss",
+                "validation_loss": "Validation Loss",
+            })
+
+            st.caption("Loss across training runs")
+            st.line_chart(loss_chart_df)
 
     st.divider()
     st.subheader("Current Best Model")

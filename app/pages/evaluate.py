@@ -56,19 +56,19 @@ def render_evaluate_tab():
                 st.subheader("Confusion Matrix")
                 st.dataframe(
                     results["confusion_matrix"],
-                    use_container_width=True,
+                    width="stretch",
                 )
 
                 st.subheader("Per-Class Performance")
                 st.dataframe(
                     results["classification_report"],
-                    use_container_width=True,
+                    width="stretch",
                 )
 
                 st.subheader("Class Accuracy")
                 st.dataframe(
                     results["class_accuracy"],
-                    use_container_width=True,
+                    width="stretch",
                 )
 
                 st.bar_chart(

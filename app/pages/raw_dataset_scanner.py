@@ -192,7 +192,7 @@ def render_raw_dataset_scanner_tab():
         f"{df['images'].sum():,} total images."
     )
 
-    st.dataframe(df, use_container_width=True)
+    st.dataframe(df, width="stretch")
 
     st.divider()
 
@@ -269,6 +269,6 @@ def render_raw_dataset_scanner_tab():
     summary_df = pd.DataFrame(summary)
 
     st.success("Import complete.")
-    st.dataframe(summary_df, use_container_width=True)
+    st.dataframe(summary_df, width="stretch")
 
     st.rerun()

@@ -87,8 +87,7 @@ def preview_image(image_path: Path, caption=True, width=None):
         st.image(
             img,
             caption=image_path.name if caption else None,
-            width=width,
-            use_container_width=False if width else True,
+            width=width or "stretch",
         )
     except Exception:
         st.warning(f"Could not preview {image_path.name}")

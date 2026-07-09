@@ -2,6 +2,8 @@ import json
 import numpy as np
 from PIL import Image
 
+from app.utils.image_utils import clean_file_name, unique_path
+
 
 def load_model_metadata(model_dir):
     model_path = model_dir / "logo_classifier.keras"
@@ -71,3 +73,13 @@ def predict_image(model_dir, image_file):
         "image_size": image_size,
         "model_info": model_info,
     }
+
+
+def save_prediction_correction(training_dir, class_name, image, original_filename):
+    correction_dir = training_dir / class_name
+    correction_dir.mkdir(parents=True, exist_ok=True)
+
+    save_path = unique_path(correction_dir / clean_file_name(original_filename))
+    image.convert("RGB").save(save_path)
+
+    return save_path
