@@ -5,8 +5,9 @@ classifier. It is currently focused on logo and brand recognition, but the same
 workflow can be used for any class-based image dataset.
 
 The app lets you upload images, organize them into class folders, import raw
-datasets, train a MobileNetV2 TensorFlow model, run predictions, evaluate test
-accuracy, and inspect model history.
+datasets, train TensorFlow transfer-learning models with several backbones, run
+predictions, review corrections, evaluate test accuracy, and share model and
+dataset bundles.
 
 ## Current Features
 
@@ -48,6 +49,7 @@ image-recognition-lab/
     training/                  Training images grouped by class
     validation/                Validation images grouped by class
     testing/                   Testing images grouped by class
+    correction_review/         Prediction corrections awaiting review
   models/                      Current trained model files used by the app
   models_output/               Older or exported model artifacts
   src/
@@ -105,6 +107,73 @@ Then open the local Streamlit URL shown in the terminal.
     files.
 12. Use `Export / Import` to share or restore a model and dataset splits.
 
+## Configurable Model Backbones
+
+The `Train Model` tab offers three pretrained backbones:
+
+- `MobileNetV2`: the default and lightest option, suitable for quick experiments
+  and lower-powered systems.
+- `EfficientNetB0`: a good balance between model size and classification
+  performance.
+- `ResNet50`: a larger, well-established architecture that generally requires
+  more training time and memory.
+
+Choose the backbone along with image size, batch size, and epoch count before
+starting a run. The selected architecture is saved in the run metadata and
+training history. Prediction and evaluation automatically use the preprocessing
+required by that architecture.
+
+The pretrained backbone is frozen during training. Only the classification head
+is trained against the classes in the current dataset.
+
+## Prediction Correction Review
+
+Predicted images no longer enter the training dataset immediately:
+
+1. Run a prediction in the `Predict` tab.
+2. Select the correct class if the prediction is wrong.
+3. Click `Submit Correction for Review`.
+4. Open `Correction Review` to inspect the image, original prediction, and
+   proposed class.
+5. Choose `Approve` to move it into the matching training class, or `Reject` to
+   discard it.
+
+Pending images and their metadata are stored under
+`data/correction_review/<class>/`. Approved images are moved to
+`data/training/<class>/` with unique filenames, so an existing training image is
+not overwritten.
+
+## Export and Import
+
+The `Export / Import` tab creates portable ZIP bundles for sharing or backup.
+An export can include:
+
+- The current model, class list, and model metadata.
+- The training, validation, and testing dataset splits.
+- Both the model and dataset in one bundle.
+
+During import, choose whether to restore the model, the dataset, or both.
+Existing files are preserved by default; enable `Overwrite files with matching
+names` only when the imported copies should replace them. Bundle paths are
+validated during import to prevent files from being written outside the model
+and dataset directories.
+
+Only current-model files are included in the model portion of a bundle. Older
+timestamped model versions and the complete training-run history remain local.
+
+## Experiment Notes
+
+Each run can include two optional notes in the `Train Model` tab:
+
+- `Dataset changes`: additions, removals, relabeling, cleanup, or split changes
+  made since the previous experiment.
+- `Manual observations`: hypotheses, known limitations, visual patterns,
+  confusion between classes, or follow-up ideas.
+
+Notes are saved in both the timestamped `model_info` JSON and
+`models/training_runs.csv`. Open `Model Manager` and expand a run under
+`Experiment Notes` to review them alongside model metrics.
+
 ## Model Files
 
 Training writes timestamped model artifacts and updates the current model files:
@@ -148,6 +217,9 @@ Run a quick metadata load check:
   model classes in `models/classes.json`.
 - TensorFlow says CUDA is missing: the app can still run on CPU; GPU support is
   optional.
+- `cannot import name 'CORRECTION_REVIEW_DIR'`: fully stop and restart Streamlit
+  so it reloads `app/utils/paths.py`; refreshing the browser does not clear
+  cached Python modules.
 
 ## Change Tracking
 
